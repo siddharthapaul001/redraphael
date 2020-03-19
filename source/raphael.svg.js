@@ -1279,7 +1279,7 @@ export default function (R) {
                     },
                     splitText = function (parentNode, text) {
                         let res, r = /<\/?(b|sub|sup|s|u|strong|a)(?:[^>]*(\s(href|rel|referrerpolicy|target|style)=['\"][^'\"]*['\"]))?[^>]*?(\/?)>/ig, matches = [], lastIdx = 0, lastMatch, UNDEF, parentIdx, parentFound, isIncorrect = false,
-                            attrMap = { "b": { 'font-weight': 'bold' }, "strong": { 'font-weight': 'bold' }, "s": { "text-decoration": "line-through" }, "u": { "text-decoration": "underline" }, "sub": {"dy": lineHeight * 0.25, "font-size": fontSize * 0.75}, "sup": {"dy": -lineHeight * 0.25, "font-size": fontSize * 0.75}},
+                            attrMap = { "b": { 'font-weight': 'bold' }, "strong": { 'font-weight': 'bold' }, "s": { "text-decoration": "line-through" }, "u": { "text-decoration": "underline" }, "sub": {"dy": fontSize * 0.6, "font-size": fontSize * 0.7}, "sup": {"dy": -fontSize * 0.6, "font-size": fontSize * 0.7}},
                             tspan, textCursor = 0, runningNode = parentNode, openedTags = 0;
                         while ((res = r.exec(text)) !== null) {
                             if (/<(b|sub|sup|strong|u|s)(?:[^>]*(\s(style)=['\"][^'\"]*['\"]))?[^>]*>/ig.test(res[0])) {
