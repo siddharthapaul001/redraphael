@@ -1276,6 +1276,96 @@ export default function (R) {
                     spacify = function (text) {
                         return text.replace(/\s+/g, ' ').trim()
                             .replace(nbspRegex, ' ');
+                    },
+                    splitText = function (parentNode, text) {
+                        let res, r = /<\/?(b|sub|sup|s|u|strong|a)(?:[^>]*(\s(href|rel|referrerpolicy|target|style)=['\"][^'\"]*['\"]))?[^>]*?(\/?)>/ig, matches = [], lastIdx = 0, lastMatch, UNDEF, parentIdx, parentFound, isIncorrect = false,
+                            attrMap = { "b": { 'font-weight': 'bold' }, "strong": { 'font-weight': 'bold' }, "s": { "text-decoration": "line-through" }, "u": { "text-decoration": "underline" }, "sub": {"dy": lineHeight * 0.25, "font-size": fontSize * 0.75}, "sup": {"dy": -lineHeight * 0.25, "font-size": fontSize * 0.75}},
+                            tspan, textCursor = 0, runningNode = parentNode, openedTags = 0;
+                        while ((res = r.exec(text)) !== null) {
+                            if (/<(b|sub|sup|strong|u|s)(?:[^>]*(\s(style)=['\"][^'\"]*['\"]))?[^>]*>/ig.test(res[0])) {
+                                // tspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
+                                // styleStr = '';
+                                // Object.keys(attrMap[res[1]]).forEach(attrName => {
+                                //     styleStr += attrName + ':' + attrMap[res[1]][attrName] + ';'
+                                // });
+                                // tspan.setAttribute('style', styleStr);
+                                runningNode.appendChild(R._g.doc.createTextNode(text.slice(textCursor, res.index)));
+                                tspan = $(tSpanStr, attrMap[res[1]]);
+                                matches.push({
+                                    tagName: res[1],
+                                    startIdx: res.index,
+                                    tagLength: res[0].length,
+                                    result: [...res],
+                                    tspan
+                                });
+                                textCursor = res.index + res[0].length;
+                                runningNode = tspan;
+                                openedTags++;
+                            } else if (/<\/(b|sub|sup|u|strong|s)>/ig.test(res[0])) {
+                                lastIdx = UNDEF; parentFound = false; isIncorrect = false;
+                                for (let i = matches.length - 1, matchFound = false; i >= 0 && !matchFound; i--) {
+                                    if (res[1] === matches[i].tagName) {
+                                        // last opening tag match
+                                        matchFound = true;
+                                        if (matches[i].endIdx === UNDEF) {
+                                            matches[i].endIdx = res.index;
+                                            matches[i].endTagLen = res[0].length;
+                                            openedTags--;
+                                        } else {
+                                            isIncorrect = true;
+                                        }
+                                        lastIdx = i;
+                                    }
+                                }
+                                parentIdx = lastIdx - 1;
+                                while (parentIdx >= 0 && !parentFound && !isIncorrect) {
+                                    if (matches[parentIdx].startIdx < matches[lastIdx].startIdx && (matches[parentIdx].endIdx === UNDEF || matches[parentIdx].endIdx > matches[lastIdx].endIdx)) {
+                                        parentFound = true;
+                                        matches[parentIdx].tspan.appendChild(matches[lastIdx].tspan);
+                                        matches[lastIdx].tspan.appendChild(R._g.doc.createTextNode(text.slice(textCursor, matches[lastIdx].endIdx)));
+                                        runningNode = matches[parentIdx].tspan;
+                                        textCursor = matches[lastIdx].endIdx + matches[lastIdx].endTagLen;
+                                    } else {
+                                        parentIdx--;
+                                    }
+                                }
+                                if (!parentFound && parentIdx < 0) {
+                                    parentNode.appendChild(matches[lastIdx].tspan);
+                                    matches[lastIdx].tspan.appendChild(R._g.doc.createTextNode(text.slice(textCursor, matches[lastIdx].endIdx)));
+                                    runningNode = parentNode;
+                                    textCursor = matches[lastIdx].endIdx + matches[lastIdx].endTagLen;
+                                }
+                                // user added some tags but not ended properly
+                                // need to check
+                                for (let j = matches.length - 1; j >= lastIdx; j--) {
+                                    if (matches[j].endIdx === UNDEF) {
+                                        matches[j].endIdx = res.index;
+                                        matches[j].endTagLen = res[0].length;
+                                        if (parentIdx >= 0) {
+                                            matches[parentIdx].tspan.appendChild(matches[j].tspan);
+                                        } else {
+                                            parentNode.appendChild(matches[j].tspan);
+                                        }
+                                        openedTags--;
+                                    }
+                                }
+                            }
+                        }
+                        if (openedTags > 0) {
+                            openedTags = [];
+                            runningNode.appendChild(R._g.doc.createTextNode(text.slice(textCursor, text.length)));
+                            runningNode = parentNode;
+                            for (let i = 0, l = matches.length - 1; i < l; i++) {
+                                if (matches[i].endIdx === UNDEF) {
+                                    runningNode.appendChild(matches[i].tspan);
+                                    openedTags.push(matches[i].tagName);
+                                    runningNode = matches[i].tspan;
+                                }
+                            }
+                        } else {
+                            parentNode.appendChild(R._g.doc.createTextNode(text.slice(textCursor, text.length)));
+                        }
+                        return openedTags;
                     };
 
                 if (params[has](textPathStr)) {
