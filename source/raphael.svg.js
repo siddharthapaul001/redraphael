@@ -1284,8 +1284,8 @@ export default function (R) {
                         parentNode.appendChild(tspan);
                     },
                     splitText = function (parentNode, text, oldOpenTags = []) {
-                        let res, r = /<\/?(b|sub|sup|s|u|strong|a)(?:[^>]*(\s(href|rel|referrerpolicy|target|style)=['\"][^'\"]*['\"]))?[^>]*?(\/?)>/ig, matches = [], lastIdx = 0, lastMatch, UNDEF, parentIdx, parentFound, isIncorrect = false,
-                            attrMap = { "b": { 'font-weight': 'bold' }, "strong": { 'font-weight': 'bold' }, "s": { "text-decoration": "line-through" }, "u": { "text-decoration": "underline" }, "sub": {"dy": '0.6em', "font-size": '70%'}, "sup": {"dy": '-0.6em', "font-size": '70%'}},
+                        let res, r = /<\/?(em|i|b|sub|sup|s|u|strong|a)(?:[^>]*(\s(href|rel|referrerpolicy|target|style)=['\"][^'\"]*['\"]))?[^>]*?(\/?)>/ig, matches = [], lastIdx = 0, lastMatch, UNDEF, parentIdx, parentFound, isIncorrect = false,
+                            attrMap = { "b": { 'font-weight': 'bold' }, "strong": { 'font-weight': 'bold' }, "s": { "text-decoration": "line-through" }, "u": { "text-decoration": "underline" }, "i": { 'font-style': 'italic' }, "em": { 'font-style': 'italic' }, "sub": {"dy": '0.6em', "font-size": '70%'}, "sup": {"dy": '-0.6em', "font-size": '70%'}},
                             tspan, textCursor = 0, runningNode = parentNode, openedTags = oldOpenTags.length;
                         // if (openedTags) {
                         for (let i = 0; i < openedTags; i++) {
