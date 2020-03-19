@@ -1282,7 +1282,7 @@ export default function (R) {
                             attrMap = { "b": { 'font-weight': 'bold' }, "strong": { 'font-weight': 'bold' }, "s": { "text-decoration": "line-through" }, "u": { "text-decoration": "underline" }, "sub": {"dy": fontSize * 0.6, "font-size": fontSize * 0.7}, "sup": {"dy": -fontSize * 0.6, "font-size": fontSize * 0.7}},
                             tspan, textCursor = 0, runningNode = parentNode, openedTags = 0;
                         while ((res = r.exec(text)) !== null) {
-                            if (/<(b|sub|sup|strong|u|s)(?:[^>]*(\s(style)=['\"][^'\"]*['\"]))?[^>]*>/ig.test(res[0])) {
+                            if (attrMap.hasOwnProperty(res[0].split(' ')[0].replace(/(<|>)/g, ''))) {
                                 // tspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
                                 // styleStr = '';
                                 // Object.keys(attrMap[res[1]]).forEach(attrName => {
@@ -1295,13 +1295,13 @@ export default function (R) {
                                     tagName: res[1],
                                     startIdx: res.index,
                                     tagLength: res[0].length,
-                                    result: [...res],
+                                    result: [...res], // added for debgging only will be removed
                                     tspan
                                 });
                                 textCursor = res.index + res[0].length;
                                 runningNode = tspan;
                                 openedTags++;
-                            } else if (/<\/(b|sub|sup|u|strong|s)>/ig.test(res[0])) {
+                            } else if (res[0][1] === '/' && attrMap.hasOwnProperty(res[0].split(' ')[0].replace(/(<|>|\/)/g, ''))) {
                                 lastIdx = UNDEF; parentFound = false; isIncorrect = false;
                                 for (let i = matches.length - 1, matchFound = false; i >= 0 && !matchFound; i--) {
                                     if (res[1] === matches[i].tagName) {
@@ -1644,8 +1644,12 @@ export default function (R) {
                         } else if (node.style.whiteSpace === PRESERVESTRING) {
                             node.style.whiteSpace = BLANKSTRING;
                         }
-                        // create and append the text node
-                        node.appendChild(R._g.doc.createTextNode(text));
+                        if (/<\/?(b|abbr|sub|sup|u|a|i|strong|s|em)/ig.test(text)) {
+                            splitText(node, text);
+                        } else {
+                            // create and append the text node
+                            node.appendChild(R._g.doc.createTextNode(text));
+                        }
                     }
 
                     if (params[vAlignStr]) { // vAlign change
