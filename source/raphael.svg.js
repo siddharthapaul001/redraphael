@@ -44,6 +44,7 @@ export default function (R) {
             fillStr = 'fill',
             transformStr = 'transform',
             visibilityStr = 'visibility',
+            zeroWidthSpaceStr = '\u200B',
             IESplTspanAttr = {
                 visibility: hiddenStr,
                 'font-size': '0px'
@@ -1279,13 +1280,27 @@ export default function (R) {
                     },
                     adjustHeight = function (parentNode, tagName) {
                         let tspan = $(tSpanStr, {'dy': tagName === 'sup' ? '0.42em' : '-0.42em'});
-                        tspan.innerHTML = '&#8203';
+                        tspan.textContent = zeroWidthSpaceStr;
                         parentNode.appendChild(tspan);
                     },
-                    splitText = function (parentNode, text) {
+                    splitText = function (parentNode, text, oldOpenTags = []) {
                         let res, r = /<\/?(b|sub|sup|s|u|strong|a)(?:[^>]*(\s(href|rel|referrerpolicy|target|style)=['\"][^'\"]*['\"]))?[^>]*?(\/?)>/ig, matches = [], lastIdx = 0, lastMatch, UNDEF, parentIdx, parentFound, isIncorrect = false,
                             attrMap = { "b": { 'font-weight': 'bold' }, "strong": { 'font-weight': 'bold' }, "s": { "text-decoration": "line-through" }, "u": { "text-decoration": "underline" }, "sub": {"dy": '0.6em', "font-size": '70%'}, "sup": {"dy": '-0.6em', "font-size": '70%'}},
-                            tspan, textCursor = 0, runningNode = parentNode, openedTags = 0;
+                            tspan, textCursor = 0, runningNode = parentNode, openedTags = oldOpenTags.length;
+                        // if (openedTags) {
+                        for (let i = 0; i < openedTags; i++) {
+                            tspan = $(tSpanStr, attrMap[openedTags[i]]);
+                            matches.push({
+                                tagName: openedTags[i],
+                                startIdx: 0,
+                                tagLength: 0,
+                                result: [], // added for debgging only will be removed
+                                tspan
+                            });
+                            runningNode = tspan;
+                        }
+                        tspan = UNDEF;
+                        // }
                         while ((res = r.exec(text)) !== null) {
                             if (attrMap.hasOwnProperty(res[0].split(' ')[0].replace(/(<|>)/g, ''))) {
                                 // tspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
@@ -1310,12 +1325,12 @@ export default function (R) {
                                 lastIdx = UNDEF; parentFound = false; isIncorrect = false;
                                 for (let i = matches.length - 1, matchFound = false; i >= 0 && !matchFound; i--) {
                                     if (res[1] === matches[i].tagName) {
-                                        // last opening tag match
-                                        matchFound = true;
                                         if (matches[i].endIdx === UNDEF) {
                                             matches[i].endIdx = res.index;
                                             matches[i].endTagLen = res[0].length;
                                             openedTags--;
+                                            // last opening tag match
+                                            matchFound = true;
                                         } else {
                                             isIncorrect = true;
                                         }
@@ -1328,7 +1343,7 @@ export default function (R) {
                                         parentFound = true;
                                         matches[parentIdx].tspan.appendChild(matches[lastIdx].tspan);
                                         matches[lastIdx].tspan.appendChild(R._g.doc.createTextNode(text.slice(textCursor, matches[lastIdx].endIdx)));
-                                        if (['sub', 'sup'].includes(matches[lastIdx].tagName)) {
+                                        if ('sub' === matches[lastIdx].tagName || 'sup' === matches[lastIdx].tagName) {
                                             adjustHeight(matches[parentIdx].tspan, matches[lastIdx].tagName);
                                         }
                                         runningNode = matches[parentIdx].tspan;
@@ -1339,7 +1354,7 @@ export default function (R) {
                                 }
                                 if (!parentFound && parentIdx < 0) {
                                     parentNode.appendChild(matches[lastIdx].tspan);
-                                    if (['sub', 'sup'].includes(matches[lastIdx].tagName)) {
+                                    if ('sub' === matches[lastIdx].tagName || 'sup' === matches[lastIdx].tagName) {
                                         adjustHeight(parentNode, matches[lastIdx].tagName);
                                     }
                                     matches[lastIdx].tspan.appendChild(R._g.doc.createTextNode(text.slice(textCursor, matches[lastIdx].endIdx)));
@@ -1348,18 +1363,18 @@ export default function (R) {
                                 }
                                 // user added some tags but not ended properly
                                 // need to check
-                                for (let j = matches.length - 1; j >= lastIdx; j--) {
+                                for (let j = matches.length - 1; j > lastIdx; j--) {
                                     if (matches[j].endIdx === UNDEF) {
                                         matches[j].endIdx = res.index;
                                         matches[j].endTagLen = res[0].length;
                                         if (parentIdx >= 0) {
                                             matches[parentIdx].tspan.appendChild(matches[j].tspan);
-                                            if (['sub', 'sup'].includes(matches[j].tagName)) {
+                                            if ('sub' === matches[lastIdx].tagName || 'sup' === matches[lastIdx].tagName) {
                                                 adjustHeight(matches[parentIdx].tspan, matches[j].tagName);
                                             }
                                         } else {
                                             parentNode.appendChild(matches[j].tspan);
-                                            if (['sub', 'sup'].includes(matches[j].tagName)) {
+                                            if ('sub' === matches[lastIdx].tagName || 'sup' === matches[lastIdx].tagName) {
                                                 adjustHeight(parentNode, matches[j].tagName);
                                             }
                                         }
