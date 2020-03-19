@@ -1277,9 +1277,14 @@ export default function (R) {
                         return text.replace(/\s+/g, ' ').trim()
                             .replace(nbspRegex, ' ');
                     },
+                    adjustHeight = function (parentNode, tagName) {
+                        let tspan = $(tSpanStr, {'dy': tagName === 'sup' ? '0.42em' : '-0.42em'});
+                        tspan.innerHTML = '&#8203';
+                        parentNode.appendChild(tspan);
+                    },
                     splitText = function (parentNode, text) {
                         let res, r = /<\/?(b|sub|sup|s|u|strong|a)(?:[^>]*(\s(href|rel|referrerpolicy|target|style)=['\"][^'\"]*['\"]))?[^>]*?(\/?)>/ig, matches = [], lastIdx = 0, lastMatch, UNDEF, parentIdx, parentFound, isIncorrect = false,
-                            attrMap = { "b": { 'font-weight': 'bold' }, "strong": { 'font-weight': 'bold' }, "s": { "text-decoration": "line-through" }, "u": { "text-decoration": "underline" }, "sub": {"dy": fontSize * 0.6, "font-size": fontSize * 0.7}, "sup": {"dy": -fontSize * 0.6, "font-size": fontSize * 0.7}},
+                            attrMap = { "b": { 'font-weight': 'bold' }, "strong": { 'font-weight': 'bold' }, "s": { "text-decoration": "line-through" }, "u": { "text-decoration": "underline" }, "sub": {"dy": '0.6em', "font-size": '70%'}, "sup": {"dy": '-0.6em', "font-size": '70%'}},
                             tspan, textCursor = 0, runningNode = parentNode, openedTags = 0;
                         while ((res = r.exec(text)) !== null) {
                             if (attrMap.hasOwnProperty(res[0].split(' ')[0].replace(/(<|>)/g, ''))) {
@@ -1323,6 +1328,9 @@ export default function (R) {
                                         parentFound = true;
                                         matches[parentIdx].tspan.appendChild(matches[lastIdx].tspan);
                                         matches[lastIdx].tspan.appendChild(R._g.doc.createTextNode(text.slice(textCursor, matches[lastIdx].endIdx)));
+                                        if (['sub', 'sup'].includes(matches[lastIdx].tagName)) {
+                                            adjustHeight(matches[parentIdx].tspan, matches[lastIdx].tagName);
+                                        }
                                         runningNode = matches[parentIdx].tspan;
                                         textCursor = matches[lastIdx].endIdx + matches[lastIdx].endTagLen;
                                     } else {
@@ -1331,6 +1339,9 @@ export default function (R) {
                                 }
                                 if (!parentFound && parentIdx < 0) {
                                     parentNode.appendChild(matches[lastIdx].tspan);
+                                    if (['sub', 'sup'].includes(matches[lastIdx].tagName)) {
+                                        adjustHeight(parentNode, matches[lastIdx].tagName);
+                                    }
                                     matches[lastIdx].tspan.appendChild(R._g.doc.createTextNode(text.slice(textCursor, matches[lastIdx].endIdx)));
                                     runningNode = parentNode;
                                     textCursor = matches[lastIdx].endIdx + matches[lastIdx].endTagLen;
@@ -1343,8 +1354,14 @@ export default function (R) {
                                         matches[j].endTagLen = res[0].length;
                                         if (parentIdx >= 0) {
                                             matches[parentIdx].tspan.appendChild(matches[j].tspan);
+                                            if (['sub', 'sup'].includes(matches[j].tagName)) {
+                                                adjustHeight(matches[parentIdx].tspan, matches[j].tagName);
+                                            }
                                         } else {
                                             parentNode.appendChild(matches[j].tspan);
+                                            if (['sub', 'sup'].includes(matches[j].tagName)) {
+                                                adjustHeight(parentNode, matches[j].tagName);
+                                            }
                                         }
                                         openedTags--;
                                     }
