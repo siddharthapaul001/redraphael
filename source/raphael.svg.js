@@ -1285,7 +1285,7 @@ export default function (R) {
                         parentNode.appendChild(tspan);
                     },
                     splitText = function (parentNode, text, oldOpenTags = []) {
-                        let res, r = /<\/?(em|i|b|sub|sup|s|u|strong|abbr|a)(?:[^>]*(\s(href|rel|referrerpolicy|target|style)=['\"][^'\"]*['\"]))?[^>]*?(\/?)>/ig, attrRegex = /\s+(\w+)=\"([^\"\']+)\"/gi, matches = [], lastIdx = 0, match, lastMatch, UNDEF, parentIdx, parentFound, isIncorrect = false,
+                        let res, r = /<\/?(em|i|b|sub|sup|s|u|strong|abbr|a)(?:[^>]*(\s(href|rel|referrerpolicy|target|style)=['\"][^'\"]*['\"]))?[^>]*?(\/?)>/ig, attrRegex = /\s+(\w+)=\"([^\"\']+)\"/gi, matches = [], lastIdx = 0, match, lastMatch, UNDEF, parentIdx, parentFound, isIncorrect = false, tagName,
                             attrMap = { 
                                 "b": { 'font-weight': 'bold' },
                                 "strong": { 'font-weight': 'bold' },
@@ -1312,19 +1312,20 @@ export default function (R) {
                         }
                         tspan = UNDEF;
                         while ((res = r.exec(text)) !== null) {
-                            if (attrMap.hasOwnProperty(res[0].split(' ')[0].replace(/(<|>)/g, ''))) {
+                            if (attrMap.hasOwnProperty(res[0].split(' ')[0].replace(/(<|>)/g, '').toLowerCase())) {
                                 runningNode.appendChild(R._g.doc.createTextNode(text.slice(textCursor, res.index)));
-                                if (res[1] === 'a' || res[1] === 'abbr') {
-                                    let attrObj = attrMap[res[1]], pair;
+                                tagName = res[1].toLowerCase();
+                                if (tagName === 'a' || tagName === 'abbr') {
+                                    let attrObj = attrMap[tagName], pair;
                                     while((pair = attrRegex.exec(res[0])) !== null) {
-                                        attrObj[(res[1] === 'abbr' && pair[1] === 'title' ? 'data-' + pair[1] : pair[1])] = pair[2];
+                                        attrObj[(tagName === 'abbr' && pair[1].toLowerCase() === 'title' ? 'data-' + pair[1].toLowerCase() : pair[1].toLowerCase())] = pair[2];
                                     }
-                                    tspan = $((res[1] === 'a' ? anchorStr : tSpanStr), attrObj);
+                                    tspan = $((tagName === 'a' ? anchorStr : tSpanStr), attrObj);
                                 } else {
-                                    tspan = $(tSpanStr, attrMap[res[1]]);
+                                    tspan = $(tSpanStr, attrMap[tagName]);
                                 }
                                 matches.push({
-                                    tagName: res[1],
+                                    tagName,
                                     startIdx: res.index,
                                     tagLength: res[0].length,
                                     result: [...res], // added for debgging only will be removed
@@ -1333,11 +1334,11 @@ export default function (R) {
                                 textCursor = res.index + res[0].length;
                                 runningNode = tspan;
                                 openedTags++;
-                            } else if (res[0][1] === '/' && attrMap.hasOwnProperty(res[0].split(' ')[0].replace(/(<|>|\/)/g, ''))) {
+                            } else if (res[0][1] === '/' && attrMap.hasOwnProperty(res[0].split(' ')[0].replace(/(<|>|\/)/g, '').toLowerCase())) {
                                 lastIdx = UNDEF; parentFound = false; isIncorrect = false, matchFound = false;
                                 // find last tag match
                                 for (let i = matches.length - 1; i >= 0 && !matchFound; i--) {
-                                    if (res[1] === matches[i].tagName) {
+                                    if (res[1].toLowerCase() === matches[i].tagName) {
                                         if (matches[i].endIdx === UNDEF) {
                                             matches[i].endIdx = res.index;
                                             matches[i].endTagLen = res[0].length;
