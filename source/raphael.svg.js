@@ -1284,10 +1284,9 @@ export default function (R) {
                         parentNode.appendChild(tspan);
                     },
                     splitText = function (parentNode, text, oldOpenTags = []) {
-                        let res, r = /<\/?(em|i|b|sub|sup|s|u|strong|a)(?:[^>]*(\s(href|rel|referrerpolicy|target|style)=['\"][^'\"]*['\"]))?[^>]*?(\/?)>/ig, matches = [], lastIdx = 0, lastMatch, UNDEF, parentIdx, parentFound, isIncorrect = false,
+                        let res, r = /<\/?(em|i|b|sub|sup|s|u|strong|a)(?:[^>]*(\s(href|rel|referrerpolicy|target|style)=['\"][^'\"]*['\"]))?[^>]*?(\/?)>/ig, matches = [], lastIdx = 0, match, lastMatch, UNDEF, parentIdx, parentFound, isIncorrect = false,
                             attrMap = { "b": { 'font-weight': 'bold' }, "strong": { 'font-weight': 'bold' }, "s": { "text-decoration": "line-through" }, "u": { "text-decoration": "underline" }, "i": { 'font-style': 'italic' }, "em": { 'font-style': 'italic' }, "sub": {"dy": '0.6em', "font-size": '70%'}, "sup": {"dy": '-0.6em', "font-size": '70%'}},
-                            tspan, textCursor = 0, runningNode = parentNode, openedTags = oldOpenTags.length;
-                        // if (openedTags) {
+                            tspan, textCursor = 0, runningNode = parentNode, openedTags = oldOpenTags.length, matchFound = false;
                         for (let i = 0; i < openedTags; i++) {
                             tspan = $(tSpanStr, attrMap[openedTags[i]]);
                             matches.push({
@@ -1300,15 +1299,8 @@ export default function (R) {
                             runningNode = tspan;
                         }
                         tspan = UNDEF;
-                        // }
                         while ((res = r.exec(text)) !== null) {
                             if (attrMap.hasOwnProperty(res[0].split(' ')[0].replace(/(<|>)/g, ''))) {
-                                // tspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
-                                // styleStr = '';
-                                // Object.keys(attrMap[res[1]]).forEach(attrName => {
-                                //     styleStr += attrName + ':' + attrMap[res[1]][attrName] + ';'
-                                // });
-                                // tspan.setAttribute('style', styleStr);
                                 runningNode.appendChild(R._g.doc.createTextNode(text.slice(textCursor, res.index)));
                                 tspan = $(tSpanStr, attrMap[res[1]]);
                                 matches.push({
@@ -1322,13 +1314,13 @@ export default function (R) {
                                 runningNode = tspan;
                                 openedTags++;
                             } else if (res[0][1] === '/' && attrMap.hasOwnProperty(res[0].split(' ')[0].replace(/(<|>|\/)/g, ''))) {
-                                lastIdx = UNDEF; parentFound = false; isIncorrect = false;
-                                for (let i = matches.length - 1, matchFound = false; i >= 0 && !matchFound; i--) {
+                                lastIdx = UNDEF; parentFound = false; isIncorrect = false, matchFound = false;
+                                // find last tag match
+                                for (let i = matches.length - 1; i >= 0 && !matchFound; i--) {
                                     if (res[1] === matches[i].tagName) {
                                         if (matches[i].endIdx === UNDEF) {
                                             matches[i].endIdx = res.index;
                                             matches[i].endTagLen = res[0].length;
-                                            openedTags--;
                                             // last opening tag match
                                             matchFound = true;
                                         } else {
@@ -1337,17 +1329,16 @@ export default function (R) {
                                         lastIdx = i;
                                     }
                                 }
+                                // find parent
                                 parentIdx = lastIdx - 1;
-                                while (parentIdx >= 0 && !parentFound && !isIncorrect) {
+                                while (parentIdx >= 0 && matchFound && !parentFound && !isIncorrect) {
                                     if (matches[parentIdx].startIdx < matches[lastIdx].startIdx && (matches[parentIdx].endIdx === UNDEF || matches[parentIdx].endIdx > matches[lastIdx].endIdx)) {
                                         parentFound = true;
                                         matches[parentIdx].tspan.appendChild(matches[lastIdx].tspan);
-                                        matches[lastIdx].tspan.appendChild(R._g.doc.createTextNode(text.slice(textCursor, matches[lastIdx].endIdx)));
                                         if ('sub' === matches[lastIdx].tagName || 'sup' === matches[lastIdx].tagName) {
                                             adjustHeight(matches[parentIdx].tspan, matches[lastIdx].tagName);
                                         }
                                         runningNode = matches[parentIdx].tspan;
-                                        textCursor = matches[lastIdx].endIdx + matches[lastIdx].endTagLen;
                                     } else {
                                         parentIdx--;
                                     }
@@ -1357,28 +1348,36 @@ export default function (R) {
                                     if ('sub' === matches[lastIdx].tagName || 'sup' === matches[lastIdx].tagName) {
                                         adjustHeight(parentNode, matches[lastIdx].tagName);
                                     }
-                                    matches[lastIdx].tspan.appendChild(R._g.doc.createTextNode(text.slice(textCursor, matches[lastIdx].endIdx)));
                                     runningNode = parentNode;
-                                    textCursor = matches[lastIdx].endIdx + matches[lastIdx].endTagLen;
                                 }
                                 // user added some tags but not ended properly
                                 // need to check
-                                for (let j = matches.length - 1; j > lastIdx; j--) {
-                                    if (matches[j].endIdx === UNDEF) {
-                                        matches[j].endIdx = res.index;
-                                        matches[j].endTagLen = res[0].length;
-                                        if (parentIdx >= 0) {
-                                            matches[parentIdx].tspan.appendChild(matches[j].tspan);
-                                            if ('sub' === matches[lastIdx].tagName || 'sup' === matches[lastIdx].tagName) {
-                                                adjustHeight(matches[parentIdx].tspan, matches[j].tagName);
+                                if (matchFound) {
+                                    match = matches.pop(), lastMatch;
+                                    openedTags--;
+                                    while(openedTags > lastIdx) {
+                                        if (lastMatch) {
+                                            match.tspan.appendChild(lastMatch.tspan);
+                                            if ('sub' === lastMatch.tagName || 'sup' === lastMatch.tagName) {
+                                                adjustHeight(match.tspan, lastMatch.tagName);
                                             }
                                         } else {
-                                            parentNode.appendChild(matches[j].tspan);
-                                            if ('sub' === matches[lastIdx].tagName || 'sup' === matches[lastIdx].tagName) {
-                                                adjustHeight(parentNode, matches[j].tagName);
-                                            }
+                                            // first iteration so add all remaining text inside it
+                                            match.tspan.appendChild(R._g.doc.createTextNode(text.slice(textCursor, matches[lastIdx].endIdx)));
+                                            textCursor = matches[lastIdx].endIdx + matches[lastIdx].endTagLen;
                                         }
+                                        lastMatch = match;
+                                        match = matches.pop();
                                         openedTags--;
+                                    }
+                                    if (lastMatch) {
+                                        match.tspan.appendChild(lastMatch.tspan);
+                                        if ('sub' === lastMatch.tagName || 'sup' === lastMatch.tagName) {
+                                            adjustHeight(match.tspan, lastMatch.tagName);
+                                        }
+                                    } else {
+                                        match.tspan.appendChild(R._g.doc.createTextNode(text.slice(textCursor, match.endIdx)));
+                                        textCursor = match.endIdx + match.endTagLen;
                                     }
                                 }
                             }
@@ -1387,7 +1386,7 @@ export default function (R) {
                             openedTags = [];
                             runningNode.appendChild(R._g.doc.createTextNode(text.slice(textCursor, text.length)));
                             runningNode = parentNode;
-                            for (let i = 0, l = matches.length - 1; i < l; i++) {
+                            for (let i = 0, l = matches.length; i < l; i++) {
                                 if (matches[i].endIdx === UNDEF) {
                                     runningNode.appendChild(matches[i].tspan);
                                     openedTags.push(matches[i].tagName);
