@@ -20,6 +20,7 @@ export default function (R) {
     if (R.svg) {
         var has = 'hasOwnProperty',
             tSpanStr = 'tspan',
+            anchorStr = 'a',
             vAlignStr = 'vertical-align',
             lineHeightStr = 'line-height',
             fontSizeStr = 'font-size',
@@ -1284,11 +1285,22 @@ export default function (R) {
                         parentNode.appendChild(tspan);
                     },
                     splitText = function (parentNode, text, oldOpenTags = []) {
-                        let res, r = /<\/?(em|i|b|sub|sup|s|u|strong|a)(?:[^>]*(\s(href|rel|referrerpolicy|target|style)=['\"][^'\"]*['\"]))?[^>]*?(\/?)>/ig, matches = [], lastIdx = 0, match, lastMatch, UNDEF, parentIdx, parentFound, isIncorrect = false,
-                            attrMap = { "b": { 'font-weight': 'bold' }, "strong": { 'font-weight': 'bold' }, "s": { "text-decoration": "line-through" }, "u": { "text-decoration": "underline" }, "i": { 'font-style': 'italic' }, "em": { 'font-style': 'italic' }, "sub": {"dy": '0.6em', "font-size": '70%'}, "sup": {"dy": '-0.6em', "font-size": '70%'}},
+                        let res, r = /<\/?(em|i|b|sub|sup|s|u|strong|abbr|a)(?:[^>]*(\s(href|rel|referrerpolicy|target|style)=['\"][^'\"]*['\"]))?[^>]*?(\/?)>/ig, attrRegex = /\s+(\w+)=\"([^\"\']+)\"/gi, matches = [], lastIdx = 0, match, lastMatch, UNDEF, parentIdx, parentFound, isIncorrect = false,
+                            attrMap = { 
+                                "b": { 'font-weight': 'bold' },
+                                "strong": { 'font-weight': 'bold' },
+                                "s": { "text-decoration": "line-through" },
+                                "u": { "text-decoration": "underline" },
+                                "i": { 'font-style': 'italic' },
+                                "em": { 'font-style': 'italic' },
+                                "sub": {"dy": '0.6em', "font-size": '70%'},
+                                "sup": {"dy": '-0.6em', "font-size": '70%'},
+                                "a" : {},
+                                "abbr": { "class": "rr__abbr", "text-decoration": "underline dotted"}
+                            },
                             tspan, textCursor = 0, runningNode = parentNode, openedTags = oldOpenTags.length, matchFound = false;
                         for (let i = 0; i < openedTags; i++) {
-                            tspan = $(tSpanStr, attrMap[openedTags[i]]);
+                            tspan = $((openedTags[i] === 'a' ? anchorStr : tSpanStr), attrMap[openedTags[i]]);
                             matches.push({
                                 tagName: openedTags[i],
                                 startIdx: 0,
@@ -1302,7 +1314,15 @@ export default function (R) {
                         while ((res = r.exec(text)) !== null) {
                             if (attrMap.hasOwnProperty(res[0].split(' ')[0].replace(/(<|>)/g, ''))) {
                                 runningNode.appendChild(R._g.doc.createTextNode(text.slice(textCursor, res.index)));
-                                tspan = $(tSpanStr, attrMap[res[1]]);
+                                if (res[1] === 'a' || res[1] === 'abbr') {
+                                    let attrObj = attrMap[res[1]], pair;
+                                    while((pair = attrRegex.exec(res[0])) !== null) {
+                                        attrObj[(res[1] === 'abbr' && pair[1] === 'title' ? 'data-' + pair[1] : pair[1])] = pair[2];
+                                    }
+                                    tspan = $((res[1] === 'a' ? anchorStr : tSpanStr), attrObj);
+                                } else {
+                                    tspan = $(tSpanStr, attrMap[res[1]]);
+                                }
                                 matches.push({
                                     tagName: res[1],
                                     startIdx: res.index,
