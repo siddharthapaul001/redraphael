@@ -1296,7 +1296,7 @@ export default function (R) {
                                 "sub": {"dy": '0.6em', "font-size": '70%'},
                                 "sup": {"dy": '-0.6em', "font-size": '70%'},
                                 "a" : {},
-                                "abbr": { "class": "rr__abbr", "text-decoration": "underline dotted"}
+                                "abbr": { "class": "rr__abbr"}
                             },
                             tspan, textCursor = 0, runningNode = parentNode, openedTags = oldOpenTags.length, matchFound = false;
                         for (let i = 0; i < openedTags; i++) {
