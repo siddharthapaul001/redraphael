@@ -1280,12 +1280,12 @@ export default function (R) {
                             .replace(nbspRegex, ' ');
                     },
                     adjustHeight = function (parentNode, tagName) {
-                        let tspan = $(tSpanStr, {'dy': tagName === 'sup' ? '0.42em' : '-0.42em'});
+                        var tspan = $(tSpanStr, {'dy': tagName === 'sup' ? '0.42em' : '-0.42em'});
                         tspan.textContent = zeroWidthSpaceStr;
                         parentNode.appendChild(tspan);
                     },
                     splitText = function (parentNode, text, oldOpenTags = []) {
-                        let res, r = /<\/?(em|i|b|sub|sup|s|u|strong|abbr|a)(?:[^>]*(\s(href|rel|referrerpolicy|target|style)=['\"][^'\"]*['\"]))?[^>]*?(\/?)>/ig, attrRegex = /\s+(\w+)=\"([^\"\']+)\"/gi, matches = [], lastIdx = 0, match, lastMatch, UNDEF, parentIdx, parentFound, isIncorrect = false, tagName,
+                        var res, r = /<\/?(em|i|b|sub|sup|s|u|strong|abbr|a)(?:[^>]*(\s(href|rel|referrerpolicy|target|style)=['\"][^'\"]*['\"]))?[^>]*?(\/?)>/ig, attrRegex = /\s+(\w+)=\"([^\"\']+)\"/gi, matches = [], lastIdx = 0, match, lastMatch, UNDEF, parentIdx, parentFound, isIncorrect = false, tagName,
                             attrMap = { 
                                 "b": { 'font-weight': 'bold' },
                                 "strong": { 'font-weight': 'bold' },
@@ -1297,14 +1297,15 @@ export default function (R) {
                                 "sup": {"dy": '-0.6em', "font-size": '70%'},
                                 "a" : {},
                                 "abbr": { "class": "rr__abbr"}
-                            },
-                            tspan, textCursor = 0, runningNode = parentNode, openedTags = oldOpenTags.length, matchFound = false;
-                        for (let i = 0; i < openedTags; i++) {
-                            tspan = $((openedTags[i] === 'a' ? anchorStr : tSpanStr), attrMap[openedTags[i]]);
+                            }, attrObj, i, l = 0,
+                            tspan, textCursor = 0, runningNode = parentNode, openedTags = oldOpenTags.length, matchFound = false, pair;
+                        for (i = 0; i < openedTags; i++) {
+                            tspan = $((oldOpenTags[i].tagName === 'a' ? anchorStr : tSpanStr), (oldOpenTags[i].tagName === 'a' || oldOpenTags[i].tagName === 'abbr') ? oldOpenTags[i].attrObj : attrMap[oldOpenTags[i].tagName]);
                             matches.push({
-                                tagName: openedTags[i],
+                                tagName: oldOpenTags[i].tagName,
                                 startIdx: 0,
                                 tagLength: 0,
+                                attrObj: oldOpenTags[i].attrObj,
                                 result: [], // added for debgging only will be removed
                                 tspan
                             });
@@ -1316,7 +1317,7 @@ export default function (R) {
                                 runningNode.appendChild(R._g.doc.createTextNode(text.slice(textCursor, res.index)));
                                 tagName = res[1].toLowerCase();
                                 if (tagName === 'a' || tagName === 'abbr') {
-                                    let attrObj = attrMap[tagName], pair;
+                                    attrObj = attrMap[tagName], pair;
                                     while((pair = attrRegex.exec(res[0])) !== null) {
                                         attrObj[(tagName === 'abbr' && pair[1].toLowerCase() === 'title' ? 'data-' + pair[1].toLowerCase() : pair[1].toLowerCase())] = pair[2];
                                     }
@@ -1329,6 +1330,7 @@ export default function (R) {
                                     startIdx: res.index,
                                     tagLength: res[0].length,
                                     result: [...res], // added for debgging only will be removed
+                                    attrObj,
                                     tspan
                                 });
                                 textCursor = res.index + res[0].length;
@@ -1337,7 +1339,7 @@ export default function (R) {
                             } else if (res[0][1] === '/' && attrMap.hasOwnProperty(res[0].split(' ')[0].replace(/(<|>|\/)/g, '').toLowerCase())) {
                                 lastIdx = UNDEF; parentFound = false; isIncorrect = false, matchFound = false;
                                 // find last tag match
-                                for (let i = matches.length - 1; i >= 0 && !matchFound; i--) {
+                                for (i = matches.length - 1; i >= 0 && !matchFound; i--) {
                                     if (res[1].toLowerCase() === matches[i].tagName) {
                                         if (matches[i].endIdx === UNDEF) {
                                             matches[i].endIdx = res.index;
@@ -1407,10 +1409,13 @@ export default function (R) {
                             openedTags = [];
                             runningNode.appendChild(R._g.doc.createTextNode(text.slice(textCursor, text.length)));
                             runningNode = parentNode;
-                            for (let i = 0, l = matches.length; i < l; i++) {
+                            for (i = 0, l = matches.length; i < l; i++) {
                                 if (matches[i].endIdx === UNDEF) {
                                     runningNode.appendChild(matches[i].tspan);
-                                    openedTags.push(matches[i].tagName);
+                                    openedTags.push({
+                                        tagName: matches[i].tagName,
+                                        attrObj: matches[i].attrObj
+                                    });
                                     runningNode = matches[i].tspan;
                                 }
                             }
@@ -1428,7 +1433,7 @@ export default function (R) {
                         tSpan,
                         txtNode,
                         dy = 0,
-                        textPathProps = {};
+                        textPathProps = {}, openedTags;
 
                     for (var key in textPathParams) {
                         if (textPathParams.hasOwnProperty(key)) {
@@ -1632,7 +1637,7 @@ export default function (R) {
                         // Note for the first tspan (i === 0), we will add only the x attribute. No dy
                         // If the containing text got changed
                         if (textChanged) {
-                            tspans = node.getElementsByTagName(tSpanStr);
+                            tspans = node.children;
                             for (i = 0; i < l; i++) {
                                 tspan = tspans[i * j];
                                 if (tspan) { // If already there is a tspan then remove the text
@@ -1670,8 +1675,12 @@ export default function (R) {
                                 } else if (tspan.style.whiteSpace === PRESERVESTRING) {
                                     tspan.style.whiteSpace = BLANKSTRING;
                                 }
-                                // create and append the text node
-                                tspan.appendChild(R._g.doc.createTextNode(texts[i]));
+                                if (/<\/?(b|abbr|sub|sup|u|a|i|strong|s|em)/ig.test(text)) {
+                                    openedTags = splitText(tspan, texts[i], openedTags);
+                                } else {
+                                    // create and append the text node
+                                    tspan.appendChild(R._g.doc.createTextNode(texts[i]));
+                                }
                             }
 
                             ii = l * j;
