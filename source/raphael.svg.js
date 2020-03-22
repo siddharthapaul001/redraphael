@@ -1357,6 +1357,9 @@ export default function (R) {
                                 while (parentIdx >= 0 && matchFound && !parentFound && !isIncorrect) {
                                     if (matches[parentIdx].startIdx < matches[lastIdx].startIdx && (matches[parentIdx].endIdx === UNDEF || matches[parentIdx].endIdx > matches[lastIdx].endIdx)) {
                                         parentFound = true;
+                                        if ('sub' === matches[lastIdx].tagName || 'sup' === matches[lastIdx].tagName) {
+                                            matches[parentIdx].tspan.appendChild(R._g.doc.createTextNode(zeroWidthSpaceStr));
+                                        }
                                         matches[parentIdx].tspan.appendChild(matches[lastIdx].tspan);
                                         if ('sub' === matches[lastIdx].tagName || 'sup' === matches[lastIdx].tagName) {
                                             adjustHeight(matches[parentIdx].tspan, matches[lastIdx].tagName);
@@ -1367,6 +1370,9 @@ export default function (R) {
                                     }
                                 }
                                 if (!parentFound && parentIdx < 0) {
+                                    if ('sub' === matches[lastIdx].tagName || 'sup' === matches[lastIdx].tagName) {
+                                        parentNode.appendChild(R._g.doc.createTextNode(zeroWidthSpaceStr));
+                                    }
                                     parentNode.appendChild(matches[lastIdx].tspan);
                                     if ('sub' === matches[lastIdx].tagName || 'sup' === matches[lastIdx].tagName) {
                                         adjustHeight(parentNode, matches[lastIdx].tagName);
@@ -1380,6 +1386,9 @@ export default function (R) {
                                     openedTags--;
                                     while(openedTags > lastIdx) {
                                         if (lastMatch) {
+                                            if ('sub' === lastMatch.tagName || 'sup' === lastMatch.tagName) {
+                                                match.tspan.appendChild(R._g.doc.createTextNode(zeroWidthSpaceStr));
+                                            }
                                             match.tspan.appendChild(lastMatch.tspan);
                                             if ('sub' === lastMatch.tagName || 'sup' === lastMatch.tagName) {
                                                 adjustHeight(match.tspan, lastMatch.tagName);
@@ -1394,6 +1403,9 @@ export default function (R) {
                                         openedTags--;
                                     }
                                     if (lastMatch) {
+                                        if ('sub' === lastMatch.tagName || 'sup' === lastMatch.tagName) {
+                                            match.tspan.appendChild(R._g.doc.createTextNode(zeroWidthSpaceStr));
+                                        }
                                         match.tspan.appendChild(lastMatch.tspan);
                                         if ('sub' === lastMatch.tagName || 'sup' === lastMatch.tagName) {
                                             adjustHeight(match.tspan, lastMatch.tagName);
@@ -1411,7 +1423,13 @@ export default function (R) {
                             runningNode = parentNode;
                             for (i = 0, l = matches.length; i < l; i++) {
                                 if (matches[i].endIdx === UNDEF) {
+                                    if ('sub' === matches[i].tagName || 'sup' === matches[i].tagName) {
+                                        runningNode.appendChild(R._g.doc.createTextNode(zeroWidthSpaceStr));
+                                    }
                                     runningNode.appendChild(matches[i].tspan);
+                                    if ('sub' === matches[i].tagName || 'sup' === matches[i].tagName) {
+                                        adjustHeight(runningNode, matches[i].tagName);
+                                    }
                                     openedTags.push({
                                         tagName: matches[i].tagName,
                                         attrObj: matches[i].attrObj
